@@ -44,8 +44,10 @@ func main() {
 
 	// Mechanical stuff
 	root := context.Background()
-	svc := gcmService{}
 	errc := make(chan error)
+	var svc GcmService
+	svc = gcmService{}
+	svc = loggingMiddleware{svc, logger}
 
 	go func() {
 		errc <- interrupt()
@@ -53,15 +55,14 @@ func main() {
 
 	go func() {
 		var (
-			transportLogger = log.NewContext(logger).With("transport", "debug")
-			mux             = http.NewServeMux()
+			mux = http.NewServeMux()
 		)
 
 		gcm := makeGcmEndpoint(svc, *delay)
 		mux.Handle("/gcm/send", httptransport.NewServer(
-			root, gcm, decodeGcmRequest, encodeResponse, httptransport.ServerErrorLogger(transportLogger)))
+			root, gcm, decodeGcmRequest, encodeResponse))
 		addr := fmt.Sprintf("%s:%d", *bind, *port)
-		transportLogger.Log("addr", addr)
+		logger.Log("addr", addr)
 		errc <- http.ListenAndServe(addr, mux)
 	}()
 
@@ -113,3 +114,21 @@ func (gcmService) Send(s string) (string, error) {
 
 // ErrEmpty is returned when an input string is empty.
 var ErrEmpty = errors.New("empty registration id")
+
+type loggingMiddleware struct {
+	GcmService
+	log.Logger
+}
+
+func (m loggingMiddleware) Send(s string) (output string, err error) {
+	defer func(begin time.Time) {
+		m.Logger.Log(
+			"method", "send",
+			"input", s,
+			"output", output,
+			"err", err,
+			"took", time.Since(begin))
+	}(time.Now())
+	output, err = m.GcmService.Send(s)
+	return
+}
