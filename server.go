@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -21,8 +22,9 @@ import (
 func main() {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		port = fs.Int("port", 8081, "Server port")
-		bind = fs.String("bind", "0.0.0.0", "Bind address")
+		port  = fs.Int("port", 8081, "Server port")
+		bind  = fs.String("bind", "0.0.0.0", "Bind address")
+		delay = fs.Int("delay", 0, "Simulate some delay (in milliseconds) before sending a response")
 	)
 
 	flag.Usage = fs.Usage // only show our flags
@@ -55,7 +57,7 @@ func main() {
 			mux             = http.NewServeMux()
 		)
 
-		gcm := makeGcmEndpoint(svc)
+		gcm := makeGcmEndpoint(svc, *delay)
 		mux.Handle("/gcm/send", httptransport.NewServer(
 			root, gcm, decodeGcmRequest, encodeResponse, httptransport.ServerErrorLogger(transportLogger)))
 		addr := fmt.Sprintf("%s:%d", *bind, *port)
@@ -86,8 +88,12 @@ func interrupt() error {
 	return fmt.Errorf("%s", <-c)
 }
 
-func makeGcmEndpoint(svc GcmService) endpoint.Endpoint {
+func makeGcmEndpoint(svc GcmService, delay int) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if delay != 0 {
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+		}
+
 		return svc.Send("regId")
 	}
 }
