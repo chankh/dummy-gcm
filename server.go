@@ -56,7 +56,7 @@ func main() {
 		)
 
 		gcm := makeGcmEndpoint(svc)
-		mux.Handle("/send", httptransport.NewServer(
+		mux.Handle("/gcm/send", httptransport.NewServer(
 			root, gcm, decodeGcmRequest, encodeResponse, httptransport.ServerErrorLogger(transportLogger)))
 		addr := fmt.Sprintf("%s:%d", *bind, *port)
 		transportLogger.Log("addr", addr)
