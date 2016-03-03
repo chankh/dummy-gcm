@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	stdlog "log"
 	"net/http"
 	"os"
@@ -70,7 +71,12 @@ func main() {
 }
 
 func decodeGcmRequest(r *http.Request) (interface{}, error) {
-	return "regId", nil
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 func encodeResponse(w http.ResponseWriter, response interface{}) error {
@@ -94,8 +100,9 @@ func makeGcmEndpoint(svc GcmService, delay int) endpoint.Endpoint {
 		if delay != 0 {
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
+		req := request.(string)
 
-		return svc.Send("regId")
+		return svc.Send(req)
 	}
 }
 
