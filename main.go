@@ -70,7 +70,7 @@ func main() {
 	logger.Log("fatal", <-errc)
 }
 
-func decodeGcmRequest(r *http.Request) (interface{}, error) {
+func decodeGcmRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return "", err
@@ -79,7 +79,7 @@ func decodeGcmRequest(r *http.Request) (interface{}, error) {
 	return string(body), nil
 }
 
-func encodeResponse(w http.ResponseWriter, response interface{}) error {
+func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	switch t := response.(type) {
 	case string:
 		_, err := w.Write([]byte(t))
